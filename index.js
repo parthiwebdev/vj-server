@@ -18,6 +18,11 @@ const writeDB = (data) => {
 };
 
 // GET all items
+app.get('/', (req, res) => {
+  res.json({ "name": "Parthiban" });
+});
+
+// GET all items
 app.get('/items', (req, res) => {
   const db = readDB();
   res.json(db.items);
