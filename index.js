@@ -4,93 +4,97 @@ const path = require('path');
 
 const app = express();
 const PORT = 3000;
-const DB_FILE = path.join(__dirname, 'db.json'); // Use __dirname to resolve the path
+const DB_FILE = path.join(__dirname, 'db.json');
 
 app.use(express.json());
 
+// In-memory storage for demonstration purposes
+let dbCache = { items: [] };
+
 const readDB = async () => {
   const data = await fs.readFile(DB_FILE, 'utf-8');
-  return JSON.parse(data);
+  dbCache = JSON.parse(data); // Update in-memory cache
+  return dbCache;
 };
 
-const writeDB = async (data) => {
-  await fs.writeFile(DB_FILE, JSON.stringify(data, null, 2));
+const writeDB = async () => {
+  await fs.writeFile(DB_FILE, JSON.stringify(dbCache, null, 2));
 };
-
-// GET all items
-app.get('/', (req, res) => {
-  res.json({ "name": "Parthiban" });
-});
 
 // GET all items
 app.get('/items', async (req, res) => {
   try {
-    const db = await readDB();
-    res.json(db.items);
+    await readDB(); // Update in-memory cache
+    res.json(dbCache.items);
   } catch (err) {
-    res.status(500).json({ message: 'Internal Server Error' });
+    console.error('Error in GET /items:', err);
+    res.status(500).json({ message: 'Internal Server Error', error: err.message });
   }
 });
 
 // GET item by ID
 app.get('/items/:id', async (req, res) => {
   try {
-    const db = await readDB();
-    const item = db.items.find((i) => i.id === parseInt(req.params.id));
+    await readDB(); // Update in-memory cache
+    const item = dbCache.items.find((i) => i.id === parseInt(req.params.id));
     if (item) {
       res.json(item);
     } else {
       res.status(404).json({ message: 'Item not found' });
     }
   } catch (err) {
-    res.status(500).json({ message: 'Internal Server Error' });
+    console.error('Error in GET /items/:id:', err);
+    res.status(500).json({ message: 'Internal Server Error', error: err.message });
   }
 });
 
 // POST create a new item
 app.post('/items', async (req, res) => {
   try {
-    const db = await readDB();
+    await readDB(); // Update in-memory cache
     const newItem = { id: Date.now(), ...req.body };
-    db.items.push(newItem);
-    await writeDB(db);
+    dbCache.items.push(newItem); // Temporarily store in-memory
+    await writeDB(); // Write to file
     res.status(201).json(newItem);
   } catch (err) {
-    res.status(500).json({ message: 'Internal Server Error' });
+    console.error('Error in POST /items:', err);
+    res.status(500).json({ message: 'Internal Server Error', error: err.message });
   }
 });
 
 // PUT update an item
 app.put('/items/:id', async (req, res) => {
   try {
-    const db = await readDB();
-    const index = db.items.findIndex((i) => i.id === parseInt(req.params.id));
+    await readDB(); // Update in-memory cache
+    const index = dbCache.items.findIndex((i) => i.id === parseInt(req.params.id));
     if (index !== -1) {
-      db.items[index] = { ...db.items[index], ...req.body };
-      await writeDB(db);
-      res.json(db.items[index]);
+      dbCache.items[index] = { ...dbCache.items[index], ...req.body };
+      await writeDB(); // Write to file
+      res.json(dbCache.items[index]);
     } else {
       res.status(404).json({ message: 'Item not found' });
     }
   } catch (err) {
-    res.status(500).json({ message: 'Internal Server Error' });
+    console.error('Error in PUT /items/:id:', err);
+    res.status(500).json({ message: 'Internal Server Error', error: err.message });
   }
 });
 
 // DELETE an item
 app.delete('/items/:id', async (req, res) => {
   try {
-    const db = await readDB();
-    const index = db.items.findIndex((i) => i.id === parseInt(req.params.id));
+    await readDB(); // Update in-memory cache
+    const index = dbCache.items.findIndex((i) => i.id === parseInt(req.params.id));
     if (index !== -1) {
-      const deletedItem = db.items.splice(index, 1);
-      await writeDB(db);
+      const deletedItem = dbCache.items.splice(index, 1);
+      await writeDB(); // Write to file
       res.json(deletedItem);
     } else {
       res.status(404).json({ message: 'Item not found' });
     }
   } catch (err) {
-    res.status(500).json({ message: 'Internal Server Error' });
+    console.error('Error in DELETE /items/:id:', err);
+    res.status(500).json({ message: 'Internal Server Error', error: err.message });
   }
 });
 
